@@ -1,0 +1,50 @@
+name:                ec-elgamal
+version:             0.1.0.0
+github:              "turlando/ec-elgamal"
+license:             AGPL-3
+author:              "Tancredi Orlando"
+maintainer:          "tancredi.orlando@gmail.com"
+copyright:           "2021 Tancredi Orlando"
+
+extra-source-files:
+- README.md
+- LICENSE.txt
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/turlando/ec-elgamal#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- cryptonite
+
+library:
+  source-dirs: src
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Wincomplete-record-updates
+- -Wredundant-constraints
+
+executables:
+  ec-elgamal-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - ec-elgamal
+
+tests:
+  ec-elgamal-test:
+    defaults: hspec/hspec@master
+    dependencies:
+    - ec-elgamal
