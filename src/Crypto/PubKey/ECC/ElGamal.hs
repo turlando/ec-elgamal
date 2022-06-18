@@ -1,12 +1,14 @@
 module Crypto.PubKey.ECC.ElGamal where
 
+import Prelude hiding (sqrt)
 import Crypto.Number.Basic (numBits)
 import Crypto.Number.ModArithmetic (squareRoot)
 import Crypto.PubKey.ECC.DH (generatePrivate)
 import Crypto.PubKey.ECC.Prim (pointAdd, pointNegate, pointMul, isPointValid)
 import Crypto.PubKey.ECC.Types (Curve(CurveF2m, CurveFP))
-import Crypto.PubKey.ECC.Types (CurveCommon(ecc_a, ecc_b, ecc_g, ecc_n))
-import Crypto.PubKey.ECC.Types (CurvePrime(CurvePrime), Point(Point))
+import Crypto.PubKey.ECC.Types (CurveCommon(ecc_a, ecc_b, ecc_g))
+import Crypto.PubKey.ECC.Types (CurvePrime(CurvePrime))
+import Crypto.PubKey.ECC.Types (Point(Point, PointO))
 import Crypto.PubKey.ECC.Types (PublicPoint, PrivateNumber)
 import Crypto.PubKey.ECC.Types (common_curve)
 import Crypto.PubKey.ECC.Types (curveSizeBits)
@@ -18,13 +20,14 @@ blockSize = 4 * 8 -- 4 bytes in bits
 
 pointAtX :: Curve -> Integer -> Maybe Point
 pointAtX (CurveFP (CurvePrime p cc)) x
+  -- y² = x³ + ax + b (mod p)
   = Point x <$> my
   where
     sqrt = squareRoot p
     a    = ecc_a cc
     b    = ecc_b cc
-    my   = sqrt (x ^ 3 + a * x + b)
-pointAtX (CurveF2m _) _
+    my   = sqrt (x ^ (3 :: Integer) + a * x + b)
+pointAtX (CurveF2m _) _x
   = error "Not implemented"
 
 embed :: Curve -> Integer -> Maybe Point
@@ -39,7 +42,7 @@ embed' curve message
   where
     curveSize     = curveSizeBits curve
     pointSize     = curveSize - blockSize -- make sure it's not negative
-    upperBound    = (toInteger pointSize) ^ 2
+    upperBound    = (toInteger pointSize) ^ (2 :: Integer)
     pointAtX'     = pointAtX curve
     isPointValid' = isPointValid curve
     startingPoint = shift message pointSize
@@ -55,6 +58,8 @@ unembed curve (Point x _y)
   where
     curveSize = curveSizeBits curve
     pointSize = curveSize - blockSize
+unembed _curve (PointO)
+  = 0
 
 encryptWith :: Curve -> PublicPoint -> Integer -> Point -> (Point, Point)
 encryptWith curve publicKey rand message
@@ -68,11 +73,9 @@ encryptWith curve publicKey rand message
 
 encrypt :: MonadRandom m => Curve -> PublicPoint -> Integer -> m (Maybe (Point, Point))
 encrypt curve publicKey message
-  = do
-    let n = ecc_n $ common_curve curve
-    rand <- generatePrivate curve
-    let msg = embed curve message
-    return $ encryptWith curve publicKey rand <$> msg
+  =  do
+      rand <- generatePrivate curve
+      return $ encryptWith curve publicKey rand <$> embed curve message
 
 decrypt :: Curve -> PrivateNumber -> (Point, Point) -> Integer
 decrypt curve privateKey (c, d)
