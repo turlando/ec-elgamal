@@ -13,6 +13,9 @@ import Crypto.PubKey.ECC.Types (curveSizeBits)
 import Crypto.Random.Types (MonadRandom)
 import Data.Bits (shift)
 
+blockSize :: Int
+blockSize = 4 * 8 -- 4 bytes in bits
+
 pointAtX :: Curve -> Integer -> Maybe Point
 pointAtX (CurveFP (CurvePrime p cc)) x
   = Point x <$> my
@@ -26,20 +29,32 @@ pointAtX (CurveF2m _) _
 
 embed :: Curve -> Integer -> Maybe Point
 embed curve message
+  = if numBits message > blockSize
+    then error "message size exceeds block size"
+    else embed' curve message
+
+embed' :: Curve -> Integer -> Maybe Point
+embed' curve message
   = findX 0 startingPoint >>= pointAtX'
   where
     curveSize     = curveSizeBits curve
-    messageSize   = numBits message
-    pointSize     = curveSize - messageSize
+    pointSize     = curveSize - blockSize -- make sure it's not negative
     upperBound    = (toInteger pointSize) ^ 2
     pointAtX'     = pointAtX curve
-    startingPoint = shift message pointSize
     isPointValid' = isPointValid curve
+    startingPoint = shift message pointSize
     findX :: Integer -> Integer -> Maybe Integer
     findX i m
       | i >= upperBound                            = Nothing
       | Just True <- isPointValid' <$> pointAtX' m = Just m
       | otherwise                                  = findX (i + 1) (m + 1)
+
+unembed :: Curve -> Point -> Integer
+unembed curve (Point x _y)
+  = shift x (negate pointSize)
+  where
+    curveSize = curveSizeBits curve
+    pointSize = curveSize - blockSize
 
 encryptWith :: Curve -> PublicPoint -> Integer -> Point -> (Point, Point)
 encryptWith curve publicKey k message
