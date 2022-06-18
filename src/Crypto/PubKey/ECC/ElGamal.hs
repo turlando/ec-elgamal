@@ -20,25 +20,26 @@ pointAtX (CurveFP (CurvePrime p cc)) x
     sqrt = squareRoot p
     a    = ecc_a cc
     b    = ecc_b cc
-    my   = sqrt (x ^ (3 :: Int) + a + x + b)
+    my   = sqrt (x ^ 3 + a * x + b)
 pointAtX (CurveF2m _) _
   = error "Not implemented"
 
 embed :: Curve -> Integer -> Maybe Point
 embed curve message
-  = findX (shift message pointSize) >>= pointAtX'
+  = findX 0 startingPoint >>= pointAtX'
   where
     curveSize     = curveSizeBits curve
     messageSize   = numBits message
     pointSize     = curveSize - messageSize
-    upperBound    = 2 ^ pointSize
+    upperBound    = (toInteger pointSize) ^ 2
     pointAtX'     = pointAtX curve
+    startingPoint = shift message pointSize
     isPointValid' = isPointValid curve
-    findX :: Integer -> Maybe Integer
-    findX m
-      | m >= upperBound                            = Nothing
+    findX :: Integer -> Integer -> Maybe Integer
+    findX i m
+      | i >= upperBound                            = Nothing
       | Just True <- isPointValid' <$> pointAtX' m = Just m
-      | otherwise                                  = findX (m + 1)
+      | otherwise                                  = findX (i + 1) (m + 1)
 
 encryptWith :: Curve -> PublicPoint -> Integer -> Point -> (Point, Point)
 encryptWith curve publicKey k message
