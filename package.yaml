@@ -43,6 +43,18 @@ executables:
     dependencies:
     - ec-elgamal
 
+benchmarks:
+  ec-elgamal-bench:
+    main:                Main.hs
+    source-dirs:         bench
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - ec-elgamal
+    - gauge
+
 tests:
   ec-elgamal-test:
     defaults: hspec/hspec@master
